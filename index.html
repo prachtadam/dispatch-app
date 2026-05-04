@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dispatch App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="font-family: Arial; padding: 20px;">
+
+  <h2>Login</h2>
+
+  <input id="name" placeholder="Name" /><br /><br />
+  <input id="pin" placeholder="PIN" type="password" /><br /><br />
+
+  <button onclick="login()">Login</button>
+
+  <p id="result"></p>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    const supabaseUrl = "PASTE_YOUR_URL_HERE";
+    const supabaseKey = "PASTE_YOUR_KEY_HERE";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+    async function login() {
+      const name = document.getElementById("name").value;
+      const pin = document.getElementById("pin").value;
+
+      const { data, error } = await supabaseClient
+        .from("users")
+        .select("*")
+        .eq("name", name)
+        .eq("pin", pin)
+        .single();
+
+      if (error) {
+        document.getElementById("result").innerText = "Login failed";
+      } else {
+        document.getElementById("result").innerText = "Welcome " + data.name;
+      }
+    }
+  </script>
+
+</body>
+</html>
