@@ -4,58 +4,7 @@ const users = [
   { id: 3, name: 'Jordan', pin: '3333' }
 ];
 
-const jobs = [
-  {
-    id: 101,
-    title: 'AC Condenser Repair',
-    address: '124 Oak Street',
-    status: 'Open',
-    createdAt: '2026-04-28T08:10:00Z',
-    assignedTech: [],
-    location: 'Northside',
-    repairs: { parts: [], services: [], charges: [], expenses: [] }
-  },
-  {
-    id: 102,
-    title: 'Roof Leak Service',
-    address: '55 Maple Avenue',
-    status: 'Open',
-    createdAt: '2026-04-29T09:35:00Z',
-    assignedTech: [],
-    location: 'Downtown',
-    repairs: { parts: [], services: [], charges: [], expenses: [] }
-  },
-  {
-    id: 103,
-    title: 'Generator Tune-Up',
-    address: '9 Pine Drive',
-    status: 'Driving',
-    createdAt: '2026-04-27T07:20:00Z',
-    assignedTech: [2],
-    location: 'South Park',
-    repairs: { parts: [{ name: 'Spark Plug', qty: 2 }], services: [], charges: [], expenses: [] }
-  },
-  {
-    id: 104,
-    title: 'Panel Replacement',
-    address: '300 Birch Road',
-    status: 'Paused',
-    createdAt: '2026-04-25T11:05:00Z',
-    assignedTech: [1, 3],
-    location: 'West End',
-    repairs: { parts: [{ name: 'Breaker', qty: 1 }], services: ['Safety Inspection'], charges: [{ desc: 'Permit fee', amt: 35 }], expenses: [] }
-  },
-  {
-    id: 105,
-    title: 'Camera System Install',
-    address: '72 Cedar Lane',
-    status: 'Completed',
-    createdAt: '2026-04-20T12:40:00Z',
-    assignedTech: [1],
-    location: 'East Hills',
-    repairs: { parts: [{ name: 'Camera Head', qty: 3 }], services: ['System Calibration'], charges: [], expenses: [{ desc: 'Mounting brackets', amt: 12 }] }
-  }
-];
+let jobs = [];
 
 const products = [
   { name: 'Replacement Filter', sku: 'P-101', quantity: 14 },
@@ -75,12 +24,17 @@ const tools = [
   { name: 'Inspection Camera' }
 ];
 
+// Supabase configuration - replace with your actual values
+const supabaseUrl = 'YOUR_SUPABASE_URL';
+const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
 let currentUser = null;
 let homeSection = 'open';
 let currentStatus = 'Idle';
 let selectedJobId = null;
 
-function login() {
+async function login() {
   const name = document.getElementById('name').value.trim();
   const pin = document.getElementById('pin').value.trim();
   const errorField = document.getElementById('login-error');
@@ -96,6 +50,7 @@ function login() {
   homeSection = 'open';
   selectedJobId = null;
   showScreen('home-screen');
+  await loadJobs();
   renderAll();
 }
 
@@ -105,6 +60,27 @@ function logout() {
   document.getElementById('name').value = '';
   document.getElementById('pin').value = '';
   showScreen('login-screen');
+}
+
+async function loadJobs() {
+  const { data, error } = await supabase
+    .from('jobs')
+    .select(`
+      id,
+      status,
+      created_at,
+      customers (name),
+      fields (name),
+      job_types (name, color)
+    `);
+
+  if (error) {
+    console.error('Error loading jobs:', error);
+    return;
+  }
+
+  jobs = data;
+  renderJobLists();
 }
 
 function showScreen(screenId) {
@@ -153,17 +129,31 @@ function renderJobLists() {
   const openJobsList = document.getElementById('open-jobs-list');
   const myJobsList = document.getElementById('my-jobs-list');
 
-  const openJobs = jobs
-    .filter((job) => job.status === 'Open')
-    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  // Group jobs by status and sort by created_at ascending
+  const groupedJobs = {
+    open: jobs.filter(job => job.status === 'open').sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
+    in_progress: jobs.filter(job => job.status === 'in_progress').sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
+    paused: jobs.filter(job => job.status === 'paused').sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  };
 
-  openJobsList.innerHTML = openJobs.length
-    ? openJobs.map((job) => renderJobCard(job, false)).join('')
-    : '<p class="detail-note">No open jobs at the moment.</p>';
+  openJobsList.innerHTML = `
+    <div class="job-group">
+      <h3>Open Jobs</h3>
+      ${groupedJobs.open.length ? groupedJobs.open.map(job => renderJobCard(job, false)).join('') : '<p class="detail-note">No open jobs.</p>'}
+    </div>
+    <div class="job-group">
+      <h3>In Progress</h3>
+      ${groupedJobs.in_progress.length ? groupedJobs.in_progress.map(job => renderJobCard(job, false)).join('') : '<p class="detail-note">No jobs in progress.</p>'}
+    </div>
+    <div class="job-group">
+      <h3>Paused Jobs</h3>
+      ${groupedJobs.paused.length ? groupedJobs.paused.map(job => renderJobCard(job, false)).join('') : '<p class="detail-note">No paused jobs.</p>'}
+    </div>
+  `;
 
   const myJobs = jobs
-    .filter((job) => job.assignedTech.includes(currentUser.id) && job.status !== 'Completed')
-    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    .filter((job) => job.assignedTech && job.assignedTech.includes(currentUser.id) && job.status !== 'completed')
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
   myJobsList.innerHTML = myJobs.length
     ? myJobs.map((job) => renderJobCard(job, true)).join('')
@@ -171,34 +161,23 @@ function renderJobLists() {
 }
 
 function renderJobCard(job, isMyJob) {
-  const techCount = job.assignedTech.length;
   let actions = '';
-  const statusClass = `status-pill status-${job.status.replace(' ', '\\ ')}`;
+  const statusClass = `status-pill status-${job.status.replace('_', '-')}`;
 
-  if (!isMyJob) {
+  if (job.status === 'open') {
     actions = `<button class="primary-button" onclick="takeJob(${job.id})">Take Job</button>`;
-  } else {
-    if (job.status === 'Driving') {
-      actions = `<button class="primary-button" onclick="arriveJob(${job.id})">Arrived</button>`;
-    }
-    if (job.status === 'On Site' || job.status === 'Driving' || job.status === 'Paused') {
-      actions += `<button class="secondary-button" onclick="openRepair(${job.id})">Repair</button>`;
-      if (job.status !== 'Completed') {
-        actions += `<button class="primary-button" onclick="completeJob(${job.id})">Complete</button>`;
-      }
-    }
   }
 
   return `
     <div class="job-card">
       <div class="top-row">
         <div>
-          <div class="job-title">${job.title}</div>
-          <div class="detail-note">${job.address} · ${job.location}</div>
+          <div class="job-title" style="color: ${job.job_types.color}">${job.job_types.name}</div>
+          <div class="detail-note">${job.customers.name} · ${job.fields.name}</div>
         </div>
-        <span class="${statusClass}">${job.status}</span>
+        <span class="${statusClass}">${job.status.replace('_', ' ')}</span>
       </div>
-      <div class="detail-note">Oldest first · ${formatAge(job.createdAt)} · ${techCount} tech${techCount === 1 ? '' : 's'}</div>
+      <div class="detail-note">Oldest first · ${formatAge(job.created_at)}</div>
       <div class="job-actions">${actions}</div>
     </div>
   `;
