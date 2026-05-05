@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dispatch Office Dashboard</title>
+  <link rel="stylesheet" href="office.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">Dispatch Office</div>
+      <nav class="nav-list">
+        <button class="nav-button active" data-section="users">Users</button>
+        <button class="nav-button" data-section="trucks">Trucks</button>
+        <button class="nav-button" data-section="customers">Customers</button>
+        <button class="nav-button" data-section="fields">Fields</button>
+        <button class="nav-button" data-section="job_types">Job Types</button>
+        <button class="nav-button" data-section="jobs">Jobs</button>
+      </nav>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="section-label">Office Dashboard</p>
+          <h1 id="section-title">Users</h1>
+        </div>
+        <div id="status-message" class="status-message"></div>
+      </header>
+      <section class="section-body" id="section-body"></section>
+    </main>
+  </div>
+
+  <script src="office.js"></script>
+</body>
+</html>
