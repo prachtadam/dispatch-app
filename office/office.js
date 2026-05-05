@@ -23,9 +23,10 @@ const sections = {
   customers: {
     title: 'Customers',
     table: 'customers',
-    columns: ['id', 'name'],
+    columns: ['id', 'name', 'phone'],
     form: [
-      { label: 'Customer Name', key: 'name', type: 'text' }
+      { label: 'Name', key: 'name', type: 'text' },
+      { label: 'Phone', key: 'phone', type: 'text' }
     ]
   },
   fields: {
