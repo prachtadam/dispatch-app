@@ -22,19 +22,32 @@
       </section>
     </div>
 
+    <div id="truck-selection-screen" class="screen hidden">
+      <section class="card">
+        <h1>Select Truck & Helpers</h1>
+        <label class="field-label" for="truck-select">Truck</label>
+        <select id="truck-select" class="input"></select>
+        <label class="field-label">Helpers</label>
+        <div id="helpers-list" class="helpers-list"></div>
+        <button class="primary-button" onclick="continueToHome()">Continue</button>
+      </section>
+    </div>
+
     <div id="home-screen" class="screen hidden">
       <header class="topbar">
-        <div>
-          <h1 class="app-title">Dispatch App</h1>
-          <div id="user-greeting" class="sub-title"></div>
+        <button class="icon-button" onclick="showHome()">🏠</button>
+        <div class="center-info" onclick="showTruckSelection()">
+          <div id="truck-id">Truck 1</div>
+          <div id="tech-info">Tech: Ava<br>Helpers: Blake, Jordan</div>
         </div>
-        <button class="icon-button" onclick="logout()">Logout</button>
+        <button class="icon-button" onclick="addJob()">+</button>
       </header>
 
-      <div class="section-panel">
-        <button id="tab-open" class="tab-button active" onclick="setHomeSection('open')">Open Jobs</button>
-        <button id="tab-my" class="tab-button" onclick="setHomeSection('my')">My Jobs</button>
-        <button id="tab-map" class="tab-button" onclick="setHomeSection('map')">Map</button>
+      <div class="main-buttons">
+        <button class="main-button" onclick="setHomeSection('open')">Open Jobs</button>
+        <button class="main-button" onclick="setHomeSection('my')">My Jobs</button>
+        <button class="main-button" onclick="setHomeSection('map')">Map View</button>
+        <button class="main-button" onclick="setHomeSection('restock')">Restock</button>
       </div>
 
       <div id="home-open" class="home-section active">
@@ -58,6 +71,13 @@
             <p>Track nearby jobs, job location notes, and route status.</p>
           </div>
           <div id="map-content"></div>
+        </section>
+      </div>
+
+      <div id="home-restock" class="home-section hidden">
+        <section class="card">
+          <div class="section-header">Restock Truck</div>
+          <div id="restock-list" class="list"></div>
         </section>
       </div>
 

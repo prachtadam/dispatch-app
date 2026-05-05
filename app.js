@@ -4,6 +4,12 @@ const users = [
   { id: 3, name: 'Jordan', pin: '3333' }
 ];
 
+const trucks = [
+  { id: 1, name: 'Truck 1' },
+  { id: 2, name: 'Truck 2' },
+  { id: 3, name: 'Truck 3' }
+];
+
 let jobs = [];
 
 const products = [
@@ -33,6 +39,8 @@ let currentUser = null;
 let homeSection = 'open';
 let currentStatus = 'Idle';
 let selectedJobId = null;
+let selectedTruck = null;
+let selectedHelpers = [];
 
 async function login() {
   const name = document.getElementById('name').value.trim();
@@ -47,19 +55,73 @@ async function login() {
 
   currentUser = user;
   errorField.innerText = '';
-  homeSection = 'open';
-  selectedJobId = null;
-  showScreen('home-screen');
-  await loadJobs();
-  renderAll();
+  selectedHelpers = [currentUser.id];
+  showScreen('truck-selection-screen');
+  renderTruckSelection();
 }
 
 function logout() {
   currentUser = null;
   selectedJobId = null;
+  selectedTruck = null;
+  selectedHelpers = [];
   document.getElementById('name').value = '';
   document.getElementById('pin').value = '';
   showScreen('login-screen');
+}
+
+function renderTruckSelection() {
+  const truckSelect = document.getElementById('truck-select');
+  truckSelect.innerHTML = trucks.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+
+  const helpersList = document.getElementById('helpers-list');
+  helpersList.innerHTML = users.map(u => `
+    <div class="helper-item">
+      <input type="checkbox" id="helper-${u.id}" ${selectedHelpers.includes(u.id) ? 'checked' : ''} onchange="toggleHelper(${u.id})">
+      <label for="helper-${u.id}">${u.name}</label>
+    </div>
+  `).join('');
+}
+
+function toggleHelper(id) {
+  if (selectedHelpers.includes(id)) {
+    selectedHelpers = selectedHelpers.filter(h => h !== id);
+  } else {
+    selectedHelpers.push(id);
+  }
+}
+
+function continueToHome() {
+  selectedTruck = trucks.find(t => t.id == document.getElementById('truck-select').value);
+  const lowStock = products.some(p => p.quantity < 5);
+  showScreen('home-screen');
+  if (lowStock) {
+    setHomeSection('restock');
+  } else {
+    setHomeSection('open');
+  }
+  renderTruckInfo();
+  loadJobs(); // load jobs after selection
+}
+
+function renderTruckInfo() {
+  document.getElementById('truck-id').textContent = selectedTruck.name;
+  const techName = currentUser.name;
+  const helpersNames = selectedHelpers.filter(id => id !== currentUser.id).map(id => users.find(u => u.id === id).name).join(', ');
+  document.getElementById('tech-info').innerHTML = `Tech: ${techName}<br>Helpers: ${helpersNames}`;
+}
+
+function showTruckSelection() {
+  showScreen('truck-selection-screen');
+  renderTruckSelection();
+}
+
+function showHome() {
+  setHomeSection('open');
+}
+
+function addJob() {
+  // placeholder
 }
 
 async function loadJobs() {
@@ -91,12 +153,13 @@ function showScreen(screenId) {
 
 function setHomeSection(section) {
   homeSection = section;
-  document.getElementById('tab-open').classList.toggle('active', section === 'open');
-  document.getElementById('tab-my').classList.toggle('active', section === 'my');
-  document.getElementById('tab-map').classList.toggle('active', section === 'map');
   document.getElementById('home-open').classList.toggle('hidden', section !== 'open');
   document.getElementById('home-my').classList.toggle('hidden', section !== 'my');
   document.getElementById('home-map').classList.toggle('hidden', section !== 'map');
+  document.getElementById('home-restock').classList.toggle('hidden', section !== 'restock');
+  if (section === 'restock') {
+    renderRestock();
+  }
 }
 
 function setTimeStatus(status) {
@@ -106,8 +169,6 @@ function setTimeStatus(status) {
 }
 
 function renderAll() {
-  renderGreeting();
-  renderTabs();
   renderJobLists();
   renderMap();
   renderInventorySummary();
@@ -158,6 +219,21 @@ function renderJobLists() {
   myJobsList.innerHTML = myJobs.length
     ? myJobs.map((job) => renderJobCard(job, true)).join('')
     : '<p class="detail-note">No jobs assigned yet.</p>';
+}
+
+function renderRestock() {
+  const restockList = document.getElementById('restock-list');
+  restockList.innerHTML = products.map(p => `
+    <div class="restock-item">
+      <span>${p.name}</span>
+      <input type="number" value="${p.quantity}" onchange="updateStock('${p.sku}', this.value)">
+    </div>
+  `).join('');
+}
+
+function updateStock(sku, qty) {
+  const product = products.find(p => p.sku === sku);
+  product.quantity = parseInt(qty);
 }
 
 function renderJobCard(job, isMyJob) {

@@ -221,6 +221,91 @@ h1 {
   font-weight: 600;
 }
 
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.center-info {
+  text-align: center;
+  cursor: pointer;
+  flex: 1;
+}
+
+.center-info div {
+  margin: 0;
+}
+
+#truck-id {
+  font-weight: bold;
+  font-size: 18px;
+}
+
+#tech-info {
+  font-style: italic;
+  font-size: 14px;
+  color: #666;
+}
+
+.main-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.main-button {
+  width: 100%;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 50px;
+  background: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.main-button:hover {
+  background: #0056b3;
+}
+
+.helpers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.helper-item {
+  display: flex;
+  align-items: center;
+}
+
+.helper-item input {
+  margin-right: 8px;
+}
+
+.restock-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.restock-item span {
+  font-weight: 500;
+}
+
+.restock-item input {
+  width: 80px;
+  padding: 4px;
+  text-align: center;
+}
+
 .job-actions {
   display: grid;
   gap: 10px;
