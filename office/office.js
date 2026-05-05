@@ -3,81 +3,66 @@ const supabaseKey = 'SUPABASE_ANON_KEY';
 const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 const sections = {
-  users: {
-    title: 'Users',
-    table: 'users',
-    columns: ['id', 'name', 'pin'],
-    form: [
-      { label: 'Name', key: 'name', type: 'text' },
-      { label: 'PIN', key: 'pin', type: 'text' }
-    ]
-  },
-  trucks: {
-    title: 'Trucks',
-    table: 'trucks',
-    columns: ['id', 'name'],
-    form: [
-      { label: 'Truck Name', key: 'name', type: 'text' }
-    ]
-  },
   customers: {
     title: 'Customers',
-    table: 'customers',
-    columns: ['id', 'name', 'phone'],
-    form: [
-      { label: 'Name', key: 'name', type: 'text' },
-      { label: 'Phone', key: 'phone', type: 'text' }
-    ]
+    table: 'customers'
   },
   fields: {
     title: 'Fields',
-    table: 'fields',
-    columns: ['id', 'name', 'customer_name'],
-    form: [
-      { label: 'Field Name', key: 'name', type: 'text' },
-      { label: 'Customer', key: 'customer_id', type: 'select', relation: 'customers' }
-    ]
+    table: 'fields'
   },
   job_types: {
     title: 'Job Types',
-    table: 'job_types',
-    columns: ['id', 'name', 'color'],
-    form: [
-      { label: 'Job Type', key: 'name', type: 'text' },
-      { label: 'Color', key: 'color', type: 'text' }
-    ]
+    table: 'job_types'
   },
   jobs: {
     title: 'Jobs',
-    table: 'jobs',
-    columns: ['id', 'title', 'status', 'customer_name', 'field_name', 'job_type_name'],
-    form: [
-      { label: 'Job Title', key: 'title', type: 'text' },
-      { label: 'Customer', key: 'customer_id', type: 'select', relation: 'customers' },
-      { label: 'Field', key: 'field_id', type: 'select', relation: 'fields' },
-      { label: 'Job Type', key: 'job_type_id', type: 'select', relation: 'job_types' },
-      { label: 'Status', key: 'status', type: 'text' }
-    ]
+    table: 'jobs'
   }
 };
 
-let currentSection = 'users';
-let relationships = {};
+let currentSection = 'customers';
+let customers = [];
+let fields = [];
+let jobTypes = [];
+let jobs = [];
 
 window.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.nav-button').forEach((button) => {
     button.addEventListener('click', () => selectSection(button.dataset.section));
   });
-  await loadRelationships();
-  await renderSection();
+  await refreshData();
+  await selectSection(currentSection);
 });
 
-async function loadRelationships() {
-  const relationKeys = ['customers', 'fields', 'job_types'];
-  for (const key of relationKeys) {
-    const { data } = await supabase.from(key).select('*').order('id');
-    relationships[key] = data || [];
-  }
+async function refreshData() {
+  await Promise.all([loadCustomers(), loadFields(), loadJobTypes(), loadJobs()]);
+}
+
+async function loadCustomers() {
+  const { data, error } = await supabase.from('customers').select('*').order('id');
+  customers = error ? [] : data || [];
+}
+
+async function loadFields() {
+  const { data, error } = await supabase
+    .from('fields')
+    .select('id,name,customer_id,customers(name)')
+    .order('id');
+  fields = error ? [] : data || [];
+}
+
+async function loadJobTypes() {
+  const { data, error } = await supabase.from('job_types').select('*').order('id');
+  jobTypes = error ? [] : data || [];
+}
+
+async function loadJobs() {
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('id,description,status,customer_id,field_id,job_type_id,customers(name),fields(name),job_types(name)')
+    .order('id');
+  jobs = error ? [] : data || [];
 }
 
 async function selectSection(sectionKey) {
@@ -86,121 +71,325 @@ async function selectSection(sectionKey) {
     button.classList.toggle('active', button.dataset.section === sectionKey);
   });
   document.getElementById('section-title').textContent = sections[sectionKey].title;
-  document.getElementById('status-message').textContent = '';
-  await renderSection();
+  setStatus('');
+  renderSection();
 }
 
-async function renderSection() {
+function renderSection() {
   const content = document.getElementById('section-body');
-  const config = sections[currentSection];
-  const list = await fetchRecords(config);
-  content.innerHTML = `
+
+  switch (currentSection) {
+    case 'customers':
+      content.innerHTML = renderCustomersSection();
+      break;
+    case 'fields':
+      content.innerHTML = renderFieldsSection();
+      break;
+    case 'job_types':
+      content.innerHTML = renderJobTypesSection();
+      break;
+    case 'jobs':
+      content.innerHTML = renderJobsSection();
+      break;
+    default:
+      content.innerHTML = '<div class="panel"><p>Section not found.</p></div>';
+  }
+}
+
+function renderCustomersSection() {
+  return `
     <div class="panel">
-      <h2>${config.title}</h2>
-      <div class="table-wrapper">
-        ${renderTable(config, list)}
-      </div>
+      <h2>Customers</h2>
+      <div class="table-wrapper">${renderCustomerTable()}</div>
     </div>
     <div class="panel">
-      <h2>Add New ${config.title.slice(0, -1)}</h2>
-      ${renderForm(config)}
+      <h2>Add Customer</h2>
+      <div class="form-row">
+        <div>
+          <label>Name</label>
+          <input id="customer-name" type="text" placeholder="Customer name" />
+        </div>
+        <div>
+          <label>Phone</label>
+          <input id="customer-phone" type="text" placeholder="(555) 123-4567" />
+        </div>
+      </div>
+      <button class="primary" onclick="submitCustomer()">Save Customer</button>
     </div>
   `;
 }
 
-async function fetchRecords(config) {
-  const table = supabase.from(config.table);
-  let query = null;
-
-  if (currentSection === 'fields') {
-    query = table.select('id,name,customer_id,customers(name)').order('id');
-  } else if (currentSection === 'jobs') {
-    query = table.select('id,title,status,customer_id,field_id,job_type_id,customers(name),fields(name),job_types(name)').order('id');
-  } else {
-    query = table.select('*').order('id');
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    document.getElementById('status-message').textContent = `Unable to load ${config.title}.`;
-    return [];
-  }
-  return data || [];
+function renderFieldsSection() {
+  return `
+    <div class="panel">
+      <h2>Fields</h2>
+      <div class="table-wrapper">${renderFieldTable()}</div>
+    </div>
+    <div class="panel">
+      <h2>Add Field</h2>
+      <div class="form-row">
+        <div>
+          <label>Field Name</label>
+          <input id="field-name" type="text" placeholder="Field name" />
+        </div>
+        <div>
+          <label>Customer</label>
+          <select id="field-customer">
+            <option value="">Select customer</option>
+            ${customers.map((customer) => `<option value="${customer.id}">${customer.name}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <button class="primary" onclick="submitField()">Save Field</button>
+    </div>
+  `;
 }
 
-function renderTable(config, records) {
-  const headers = config.columns.map((column) => `<th>${formatHeader(column)}</th>`).join('');
-  const rows = records.map((record) => {
-    const values = config.columns.map((column) => {
-      if (column === 'customer_name') return record.customers?.name || record.customer_name || '';
-      if (column === 'field_name') return record.fields?.name || record.field_name || '';
-      if (column === 'job_type_name') return record.job_types?.name || record.job_type_name || '';
-      return record[column] ?? '';
-    }).map((value) => `<td>${value}</td>`).join('');
-    return `<tr>${values}</tr>`;
-  }).join('');
+function renderJobTypesSection() {
+  return `
+    <div class="panel">
+      <h2>Job Types</h2>
+      <div class="table-wrapper">${renderJobTypeTable()}</div>
+    </div>
+    <div class="panel">
+      <h2>Add Job Type</h2>
+      <div class="form-row">
+        <div>
+          <label>Name</label>
+          <input id="job-type-name" type="text" placeholder="Job type name" />
+        </div>
+        <div>
+          <label>Color</label>
+          <input id="job-type-color" type="text" placeholder="#34d399" />
+        </div>
+      </div>
+      <button class="primary" onclick="submitJobType()">Save Job Type</button>
+    </div>
+  `;
+}
 
+function renderJobsSection() {
+  return `
+    <div class="panel">
+      <h2>Jobs</h2>
+      <div class="table-wrapper">${renderJobTable()}</div>
+    </div>
+    <div class="panel">
+      <h2>Add Job</h2>
+      <div class="form-row">
+        <div>
+          <label>Customer</label>
+          <select id="job-customer" onchange="updateJobFieldOptions()">
+            <option value="">Select customer</option>
+            ${customers.map((customer) => `<option value="${customer.id}">${customer.name}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label>Field</label>
+          <select id="job-field" disabled>
+            <option value="">Select field</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Job Type</label>
+          <select id="job-job-type">
+            <option value="">Select job type</option>
+            ${jobTypes.map((type) => `<option value="${type.id}">${type.name}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label>Description</label>
+          <input id="job-description" type="text" placeholder="Job description" />
+        </div>
+      </div>
+      <button class="primary" onclick="submitJob()">Save Job</button>
+    </div>
+  `;
+}
+
+function renderCustomerTable() {
+  if (!customers.length) {
+    return '<p>No customers found.</p>';
+  }
+  const rows = customers.map((customer) => `
+    <tr>
+      <td>${customer.id}</td>
+      <td>${customer.name}</td>
+      <td>${customer.phone || ''}</td>
+    </tr>
+  `).join('');
   return `
     <table>
-      <thead><tr>${headers}</tr></thead>
+      <thead><tr><th>ID</th><th>Name</th><th>Phone</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   `;
 }
 
-function renderForm(config) {
-  const inputs = config.form.map((field) => {
-    if (field.type === 'select') {
-      const options = relationships[field.relation] || [];
-      const choices = options.map((item) => `<option value="${item.id}">${item.name}</option>`).join('');
-      return `
-        <label>${field.label}</label>
-        <select id="field-${field.key}">
-          <option value="">Select ${field.label}</option>
-          ${choices}
-        </select>
-      `;
-    }
-    return `
-      <label>${field.label}</label>
-      <input id="field-${field.key}" type="${field.type}" />
-    `;
-  }).join('');
-
+function renderFieldTable() {
+  if (!fields.length) {
+    return '<p>No fields found.</p>';
+  }
+  const rows = fields.map((field) => `
+    <tr>
+      <td>${field.id}</td>
+      <td>${field.name}</td>
+      <td>${field.customers?.name || ''}</td>
+    </tr>
+  `).join('');
   return `
-    <div class="form-row">${inputs}</div>
-    <button class="primary" onclick="submitForm()">Add ${config.title.slice(0, -1)}</button>
+    <table>
+      <thead><tr><th>ID</th><th>Field</th><th>Customer</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
   `;
 }
 
-async function submitForm() {
-  const config = sections[currentSection];
-  const values = {};
-  for (const field of config.form) {
-    const element = document.getElementById(`field-${field.key}`);
-    values[field.key] = element.value;
+function renderJobTypeTable() {
+  if (!jobTypes.length) {
+    return '<p>No job types found.</p>';
   }
+  const rows = jobTypes.map((type) => `
+    <tr>
+      <td>${type.id}</td>
+      <td>${type.name}</td>
+      <td>${type.color || ''}</td>
+    </tr>
+  `).join('');
+  return `
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Color</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
 
-  const payload = {};
-  for (const field of config.form) {
-    if (field.type === 'select') {
-      payload[field.key] = parseInt(values[field.key], 10) || null;
-    } else {
-      payload[field.key] = values[field.key];
-    }
+function renderJobTable() {
+  if (!jobs.length) {
+    return '<p>No jobs found.</p>';
   }
+  const rows = jobs.map((job) => `
+    <tr>
+      <td>${job.id}</td>
+      <td>${job.description || ''}</td>
+      <td>${job.customers?.name || ''}</td>
+      <td>${job.fields?.name || ''}</td>
+      <td>${job.job_types?.name || ''}</td>
+      <td>${job.status || ''}</td>
+    </tr>
+  `).join('');
+  return `
+    <table>
+      <thead><tr><th>ID</th><th>Description</th><th>Customer</th><th>Field</th><th>Job Type</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
 
-  const { error } = await supabase.from(config.table).insert([payload]);
-  if (error) {
-    document.getElementById('status-message').textContent = `Unable to add ${config.title.slice(0, -1)}.`;
+async function submitCustomer() {
+  const name = document.getElementById('customer-name').value.trim();
+  const phone = document.getElementById('customer-phone').value.trim();
+
+  if (!name) {
+    setStatus('Customer name is required.', 'error');
     return;
   }
 
-  document.getElementById('status-message').textContent = `${config.title.slice(0, -1)} added successfully.`;
-  await loadRelationships();
-  await renderSection();
+  const { error } = await supabase.from('customers').insert([{ name, phone }]);
+  if (error) {
+    setStatus('Unable to save customer.', 'error');
+    return;
+  }
+
+  await refreshData();
+  setStatus('Customer added successfully.', 'success');
+  selectSection('customers');
 }
 
-function formatHeader(value) {
-  return value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+async function submitField() {
+  const name = document.getElementById('field-name').value.trim();
+  const customerId = parseInt(document.getElementById('field-customer').value, 10);
+
+  if (!name || !customerId) {
+    setStatus('Field name and customer are required.', 'error');
+    return;
+  }
+
+  const { error } = await supabase.from('fields').insert([{ name, customer_id: customerId }]);
+  if (error) {
+    setStatus('Unable to save field.', 'error');
+    return;
+  }
+
+  await refreshData();
+  setStatus('Field added successfully.', 'success');
+  selectSection('fields');
+}
+
+async function submitJobType() {
+  const name = document.getElementById('job-type-name').value.trim();
+  const color = document.getElementById('job-type-color').value.trim();
+
+  if (!name) {
+    setStatus('Job type name is required.', 'error');
+    return;
+  }
+
+  const { error } = await supabase.from('job_types').insert([{ name, color }]);
+  if (error) {
+    setStatus('Unable to save job type.', 'error');
+    return;
+  }
+
+  await refreshData();
+  setStatus('Job type added successfully.', 'success');
+  selectSection('job_types');
+}
+
+async function submitJob() {
+  const customerId = parseInt(document.getElementById('job-customer').value, 10);
+  const fieldId = parseInt(document.getElementById('job-field').value, 10);
+  const jobTypeId = parseInt(document.getElementById('job-job-type').value, 10);
+  const description = document.getElementById('job-description').value.trim();
+
+  if (!customerId || !fieldId || !jobTypeId || !description) {
+    setStatus('All job fields are required.', 'error');
+    return;
+  }
+
+  const { error } = await supabase.from('jobs').insert([{ customer_id: customerId, field_id: fieldId, job_type_id: jobTypeId, description, status: 'open' }]);
+  if (error) {
+    setStatus('Unable to save job.', 'error');
+    return;
+  }
+
+  await refreshData();
+  setStatus('Job added successfully.', 'success');
+  selectSection('jobs');
+}
+
+function updateJobFieldOptions() {
+  const customerId = parseInt(document.getElementById('job-customer').value, 10);
+  const fieldSelect = document.getElementById('job-field');
+
+  if (!customerId) {
+    fieldSelect.innerHTML = '<option value="">Select field</option>';
+    fieldSelect.disabled = true;
+    return;
+  }
+
+  const options = fields.filter((field) => field.customer_id === customerId);
+  fieldSelect.innerHTML = `
+    <option value="">Select field</option>
+    ${options.map((field) => `<option value="${field.id}">${field.name}</option>`).join('')}
+  `;
+  fieldSelect.disabled = options.length === 0;
+}
+
+function setStatus(message, type) {
+  const status = document.getElementById('status-message');
+  status.textContent = message;
+  status.className = `status-message ${type === 'success' ? 'message-success' : 'message-error'}`;
 }

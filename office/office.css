@@ -1,7 +1,7 @@
 :root {
   color-scheme: light;
   font-family: Inter, system-ui, sans-serif;
-  background: #f3f4f6;
+  background: #f1f5f9;
   color: #111827;
 }
 
@@ -23,14 +23,14 @@ body {
 .sidebar {
   background: #0f172a;
   color: white;
-  padding: 28px 20px;
+  padding: 32px 22px;
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
 .brand {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -54,16 +54,16 @@ body {
 
 .nav-button.active,
 .nav-button:hover {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.12);
   color: white;
 }
 
 .main {
-  padding: 24px 28px;
-  background: #f8fafc;
+  padding: 28px 32px;
+  background: #eef2f7;
 }
 
-.topbar {
+.main-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -71,7 +71,7 @@ body {
   margin-bottom: 24px;
 }
 
-.section-label {
+.small-label {
   margin: 0 0 4px;
   color: #64748b;
   font-size: 14px;
@@ -79,12 +79,13 @@ body {
 
 h1 {
   margin: 0;
-  font-size: 30px;
+  font-size: 32px;
 }
 
 .status-message {
   color: #475569;
   font-size: 14px;
+  min-height: 20px;
 }
 
 .section-body {
@@ -96,7 +97,7 @@ h1 {
   background: white;
   border-radius: 24px;
   padding: 24px;
-  box-shadow: 0 20px 50px rgba(15,23,42,0.08);
+  box-shadow: 0 20px 60px rgba(15,23,42,0.09);
 }
 
 .panel h2 {
@@ -114,7 +115,7 @@ table {
 }
 
 thead {
-  background: #f1f5f9;
+  background: #f8fafc;
 }
 
 th, td {
@@ -135,14 +136,14 @@ tr:hover td {
 .form-row {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 input, select {
   width: 100%;
-  padding: 12px 14px;
+  padding: 14px 16px;
   border: 1px solid #cbd5e1;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #f8fafc;
   font-size: 15px;
 }
@@ -161,10 +162,12 @@ button.primary:hover {
   background: #1d4ed8;
 }
 
-.status-bar {
-  margin-top: 18px;
-  font-size: 14px;
-  color: #475569;
+.message-success {
+  color: #166534;
+}
+
+.message-error {
+  color: #b91c1c;
 }
 
 @media (max-width: 900px) {
@@ -176,7 +179,7 @@ button.primary:hover {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
   }
 
   .nav-list {
